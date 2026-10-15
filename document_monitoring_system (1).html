@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pemantauan Dokumen - Hospital Port Dickson</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            800: '#1B3C73',
+                            900: '#0F2C59',
+                            950: '#0A1D3C',
+                        },
+                        gov: {
+                            gold: '#D4AF37',
+                            light: '#F8FAFC',
+                            card: '#F1F5F9',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased flex flex-col min-h-screen">
+
+    <!-- TOP HEADER / BRANDING BAR -->
+    <header class="bg-navy-900 text-white shadow-md sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Brand & Logo -->
+                <div class="flex items-center space-x-4">
+                    <div class="bg-white p-2 rounded-lg shadow-inner flex items-center justify-center w-12 h-12">
+                        <!-- Emblem Placeholder / Crest -->
+                        <i class="fa-solid fa-hospital text-navy-900 text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-semibold tracking-widest text-amber-400 uppercase">Kementerian Kesihatan Malaysia</span>
+                        </div>
+                        <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
+                            Sistem Pemantauan Dokumen (DMS)
+                        </h1>
+                        <p class="text-xs text-slate-300 font-medium">Unit Perolehan, Aset dan Stor &bull; Hospital Port Dickson</p>
+                    </div>
+                </div>
+
+                <!-- Right Side Actions & Role Switcher -->
+                <div class="flex items-center space-x-3">
+                    <!-- Current User Status Indicator -->
+                    <div class="hidden md:flex flex-col text-right mr-2">
+                        <span id="userDisplayName" class="text-sm font-semibold text-white">Pentadbir Perolehan</span>
+                        <span id="userRoleBadge" class="text-xs text-emerald-400 font-medium flex items-center justify-end gap-1">
+                            <i class="fa-solid fa-shield-halved text-[10px]"></i> Administrator
+                        </span>
+                    </div>
+
+                    <!-- Role Selector Dropdown -->
+                    <div class="relative inline-block text-left">
+                        <button id="roleMenuBtn" onclick="toggleRoleDropdown()" class="bg-navy-800 hover:bg-navy-950 text-white text-xs font-medium px-3 py-2 rounded-lg border border-slate-600 flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-user-gear text-amber-400"></i>
+                            <span class="hidden sm:inline">Tukar Peranan</span>
+                            <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </button>
+                        <div id="roleDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 py-1 text-slate-700">
+                            <div class="px-4 py-2 border-b text-xs text-slate-500 font-semibold">Tukar Mod Log Masuk</div>
+                            <button onclick="switchRole('admin')" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 flex items-center justify-between">
+                                <span class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-user-shield text-navy-800"></i>
+                                    <span>Administrator</span>
+                                </span>
+                                <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono">Full Access</span>
+                            </button>
+                            <button onclick="switchRole('viewer')" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 flex items-center justify-between">
+                                <span class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-eye text-slate-600"></i>
+                                    <span>Viewer</span>
+                                </span>
+                                <span class="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono">Read Only</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Add Button (Admin Only) -->
+                    <button id="quickAddBtn" onclick="openAddModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs sm:text-sm px-3.5 py-2 rounded-lg shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="hidden sm:inline">Daftar Dokumen</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS BAR -->
+    <nav class="bg-white border-b border-slate-200 sticky top-20 z-20 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-8 overflow-x-auto custom-scrollbar">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-tab border-b-2 border-navy-900 text-navy-900 font-semibold py-3 px-1 text-sm flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Papan Pemuka (Dashboard)</span>
+                </button>
+                <button onclick="switchTab('register')" id="tab-register" class="nav-tab border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-medium py-3 px-1 text-sm flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span>Daftar Dokumen</span>
+                </button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="nav-tab border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-medium py-3 px-1 text-sm flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span>Laporan & Eksport</span>
+                </button>
+                <button onclick="switchTab('users')" id="tab-users" class="nav-tab admin-only border-b-2 border-transparent text-slate-500 hover:text-slate-700 font-medium py-3 px-1 text-sm flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Pengurusan Pengguna</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="view-dashboard" class="space-y-6">
+            <!-- Header Section -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Ringkasan Status Dokumen & Perolehan</h2>
+                    <p class="text-xs sm:text-sm text-slate-500">Unit Perolehan, Aset dan Stor - Hospital Port Dickson</p>
+                </div>
+                <div class="flex items-center space-x-2 text-xs text-slate-600 bg-slate-100 px-3 py-2 rounded-lg font-mono">
+                    <i class="fa-regular fa-calendar-check text-navy-800 text-sm"></i>
+                    <span id="currentDateDisplay">--/--/----</span>
+                </div>
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                <!-- Total Documents -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                        <span>Jumlah Dokumen</span>
+                        <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-solid fa-files"></i></div>
+                    </div>
+                    <div id="statTotalDocs" class="text-2xl font-bold text-slate-900">0</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Keseluruhan rekod</div>
+                </div>
+
+                <!-- Pending Documents -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                        <span>Pending</span>
+                        <div class="p-2 bg-amber-50 text-amber-600 rounded-lg"><i class="fa-solid fa-clock"></i></div>
+                    </div>
+                    <div id="statPending" class="text-2xl font-bold text-amber-600">0</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Menunggu tindakan</div>
+                </div>
+
+                <!-- In Progress Documents -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                        <span>Dalam Proses</span>
+                        <div class="p-2 bg-sky-50 text-sky-600 rounded-lg"><i class="fa-solid fa-spinner"></i></div>
+                    </div>
+                    <div id="statInProgress" class="text-2xl font-bold text-sky-600">0</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Dalam tindakan</div>
+                </div>
+
+                <!-- Completed Documents -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                        <span>Selesai</span>
+                        <div class="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><i class="fa-solid fa-circle-check"></i></div>
+                    </div>
+                    <div id="statCompleted" class="text-2xl font-bold text-emerald-600">0</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Proses tamat</div>
+                </div>
+
+                <!-- On Hold Documents -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                        <span>On Hold</span>
+                        <div class="p-2 bg-rose-50 text-rose-600 rounded-lg"><i class="fa-solid fa-pause"></i></div>
+                    </div>
+                    <div id="statOnHold" class="text-2xl font-bold text-rose-600">0</div>
+                    <div class="text-[11px] text-slate-500 mt-1">Ditangguhkan</div>
+                </div>
+
+                <!-- Total Value RM -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition col-span-2 lg:col-span-1">
+                    <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                        <span>Nilai Keseluruhan</span>
+                        <div class="p-2 bg-emerald-50 text-emerald-700 rounded-lg"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    </div>
+                    <div id="statTotalValue" class="text-xl font-bold text-slate-900 font-mono">RM 0.00</div>
+                    <div class="text-[11px] text-emerald-600 font-medium mt-1">Nilai Kumulatif</div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Status Distribution Chart -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                        <span>Taburan Status Dokumen</span>
+                        <i class="fa-solid fa-chart-pie text-slate-400"></i>
+                    </h3>
+                    <div class="relative h-64 flex items-center justify-center">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Monthly Intake Activity Chart -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+                    <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                        <span>Trend Aktiviti Pendaftaran Dokumen</span>
+                        <i class="fa-solid fa-chart-column text-slate-400"></i>
+                    </h3>
+                    <div class="relative h-64">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Log Section -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-history text-navy-800"></i>
+                        <span>Aktiviti Dokumen Terkini</span>
+                    </h3>
+                    <span class="text-xs text-slate-500">Kemas kini masa nyata</span>
+                </div>
+                <div id="recentActivityList" class="divide-y divide-slate-100 text-xs text-slate-600">
+                    <!-- Dynamic Log Items Inserted Here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. DOCUMENT REGISTER VIEW -->
+        <section id="view-register" class="hidden space-y-4">
+            <!-- Controls, Search and Filter Toolbar -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <!-- Search Input -->
+                    <div class="relative flex-grow max-w-md">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" id="searchInput" onkeyup="filterDocuments()" placeholder="Cari Nama Pembekal, Dokumen, SQ, RN, LPO, Invois..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <!-- Filters & Action Controls -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Status Filter Dropdown -->
+                        <select id="statusFilter" onchange="filterDocuments()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                            <option value="ALL">Semua Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="On Hold">On Hold</option>
+                        </select>
+
+                        <!-- Refresh Table Button -->
+                        <button onclick="renderDocumentTable()" class="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-600" title="Kemas kini senarai">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+
+                        <!-- Admin Modal Add Button -->
+                        <button onclick="openAddModal()" class="admin-only bg-navy-900 hover:bg-navy-950 text-white font-medium text-sm px-3.5 py-2 rounded-lg shadow transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Tambah Dokumen</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DOCUMENT REGISTER TABLE -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-navy-900 text-white font-semibold uppercase tracking-wider text-[11px]">
+                            <tr>
+                                <th class="py-3.5 px-3 text-center w-12 border-b border-navy-800">No.</th>
+                                <th class="py-3.5 px-3 min-w-[90px] border-b border-navy-800">Tarikh</th>
+                                <th class="py-3.5 px-3 min-w-[150px] border-b border-navy-800">Nama / Pemohon / Pembekal</th>
+                                <th class="py-3.5 px-3 min-w-[180px] border-b border-navy-800">Nama Dokumen</th>
+                                <th class="py-3.5 px-3 min-w-[100px] border-b border-navy-800">No. SQ</th>
+                                <th class="py-3.5 px-3 min-w-[100px] border-b border-navy-800">No. RN</th>
+                                <th class="py-3.5 px-3 min-w-[100px] border-b border-navy-800">No. LPO</th>
+                                <th class="py-3.5 px-3 min-w-[100px] border-b border-navy-800">No. DO</th>
+                                <th class="py-3.5 px-3 min-w-[110px] border-b border-navy-800">No. Sistem DO</th>
+                                <th class="py-3.5 px-3 min-w-[110px] border-b border-navy-800">No. Invois</th>
+                                <th class="py-3.5 px-3 min-w-[110px] text-right border-b border-navy-800">Nilai (RM)</th>
+                                <th class="py-3.5 px-3 min-w-[110px] text-center border-b border-navy-800">Status</th>
+                                <th class="py-3.5 px-3 min-w-[140px] border-b border-navy-800">Catatan (Remarks)</th>
+                                <th class="py-3.5 px-3 text-center min-w-[120px] border-b border-navy-800">Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documentTableBody" class="divide-y divide-slate-200 font-normal text-slate-700">
+                            <!-- Dynamic Table Rows Rendered via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State Placeholder -->
+                <div id="noDataMessage" class="hidden py-12 text-center text-slate-400">
+                    <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
+                    <p class="text-sm">Tiada rekod dokumen ditemui.</p>
+                </div>
+
+                <!-- Table Footer Info -->
+                <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <span id="recordCountInfo">Menunjukkan 0 rekod</span>
+                    <span class="font-mono text-slate-600">Unit Perolehan, Aset & Stor - HPD</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. REPORTS & EXPORT VIEW -->
+        <section id="view-reports" class="hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-900 mb-2">Jana & Eksport Laporan Dokumen</h2>
+                <p class="text-sm text-slate-500 mb-6">Pilih julat tarikh dan format untuk muat turun laporan rasmi Unit Perolehan, Aset dan Stor.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tarikh Mula</label>
+                        <input type="date" id="reportStartDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tarikh Akhir</label>
+                        <input type="date" id="reportEndDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tapis Status</label>
+                        <select id="reportStatusFilter" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                            <option value="ALL">Semua Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="On Hold">On Hold</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3 border-t border-slate-100 pt-5">
+                    <button onclick="exportCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow transition flex items-center space-x-2">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Eksport Excel / CSV</span>
+                    </button>
+                    <button onclick="printOfficialReport()" class="bg-navy-900 hover:bg-navy-950 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow transition flex items-center space-x-2">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Cetak Laporan Rasmi (PDF)</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. USER MANAGEMENT VIEW (ADMIN ONLY) -->
+        <section id="view-users" class="hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Pengurusan Pengguna Terbilang</h2>
+                        <p class="text-xs text-slate-500">Senarai kakitangan yang diberi kebenaran mengakses Sistem Pemantauan Dokumen</p>
+                    </div>
+                    <button onclick="alert('Fungsi pendaftaran pengguna baharu sedia digunakan oleh Pentadbir Sistem.')" class="bg-navy-900 text-white text-xs px-3 py-2 rounded-lg font-medium">
+                        <i class="fa-solid fa-user-plus mr-1"></i> Tambah Pengguna
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 text-slate-700 font-semibold uppercase">
+                            <tr>
+                                <th class="py-3 px-4">Nama Kakitangan</th>
+                                <th class="py-3 px-4">Nama Pengguna</th>
+                                <th class="py-3 px-4">Unit / Bahagian</th>
+                                <th class="py-3 px-4">Peranan Access</th>
+                                <th class="py-3 px-4">Log Masuk Terakhir</th>
+                                <th class="py-3 px-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userListTable" class="divide-y divide-slate-200">
+                            <!-- Pre-seeded user records -->
+                            <tr>
+                                <td class="py-3 px-4 font-semibold text-slate-800">Ahmad Razali Bin Hashim</td>
+                                <td class="py-3 px-4 font-mono text-slate-600">admin</td>
+                                <td class="py-3 px-4">Unit Perolehan & Aset</td>
+                                <td class="py-3 px-4"><span class="bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded text-[10px]">Administrator</span></td>
+                                <td class="py-3 px-4 text-slate-500">Hari ini, 09:15 AM</td>
+                                <td class="py-3 px-4 text-center"><span class="text-emerald-600 font-semibold">Aktif</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-semibold text-slate-800">Siti Nurhaliza Binti Yusof</td>
+                                <td class="py-3 px-4 font-mono text-slate-600">viewer</td>
+                                <td class="py-3 px-4">Unit Stor Utama</td>
+                                <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded text-[10px]">Viewer</span></td>
+                                <td class="py-3 px-4 text-slate-500">Semalam, 04:30 PM</td>
+                                <td class="py-3 px-4 text-center"><span class="text-emerald-600 font-semibold">Aktif</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-4 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>
+                &copy; 2026 <strong>Hospital Port Dickson</strong>. Unit Perolehan, Aset dan Stor. Hak Cipta Terpelihara.
+            </div>
+            <div class="flex items-center space-x-4 text-slate-400">
+                <span>Versi 2.4.0</span>
+                <span>&bull;</span>
+                <span class="text-navy-900 font-semibold">Sistem Rasmi Kerajaan</span>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- MODAL 1: ADD / EDIT DOCUMENT FORM -->
+    <div id="docModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full border border-slate-200 overflow-hidden my-8">
+            <!-- Modal Header -->
+            <div class="bg-navy-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 id="modalTitle" class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-file-circle-plus text-amber-400"></i>
+                    <span>Daftar Dokumen Baharu</span>
+                </h3>
+                <button onclick="closeModal()" class="text-slate-300 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form Body -->
+            <form id="docForm" onsubmit="saveDocument(event)" class="p-6 space-y-4">
+                <input type="hidden" id="editDocId">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Date Input -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tarikh Pendaftaran <span class="text-red-500">*</span></label>
+                        <input type="date" id="docDate" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <!-- Status Input -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Status Dokumen <span class="text-red-500">*</span></label>
+                        <select id="docStatus" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="On Hold">On Hold</option>
+                        </select>
+                    </div>
+
+                    <!-- Name / Requestor / Supplier -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Nama Pemohon / Pembekal / Syarikat <span class="text-red-500">*</span></label>
+                        <input type="text" id="docName" placeholder="Contoh: MediSupply Sdn Bhd / Wad 3 HPD" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <!-- Document Title / Description -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Nama / Tajuk Dokumen <span class="text-red-500">*</span></label>
+                        <input type="text" id="docTitle" placeholder="Contoh: Pembekalan Peralatan Pakai Buang Dewan Bedah" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <!-- Reference Numbers Grid -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">No. SQ (Sebut Harga)</label>
+                        <input type="text" id="docSQ" placeholder="SQ-2026-XXXX" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">No. RN (Nota Pesanan)</label>
+                        <input type="text" id="docRN" placeholder="RN-2026-XXXX" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">No. LPO (Pesanan Kerajaan)</label>
+                        <input type="text" id="docLPO" placeholder="LPO-HPD-XXXX" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">No. DO (Delivery Order)</label>
+                        <input type="text" id="docDO" placeholder="DO-XXXXX" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">No. Sistem DO</label>
+                        <input type="text" id="docDOSystem" placeholder="SYS-DO-XXXX" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">No. Invois</label>
+                        <input type="text" id="docInvoice" placeholder="INV-2026-XXXX" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    </div>
+
+                    <!-- Value RM Input -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Nilai Perolehan (RM) <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-sm font-semibold text-slate-500">RM</span>
+                            <input type="number" step="0.01" min="0" id="docValue" placeholder="0.00" required class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Remarks Field -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Catatan / Remarks</label>
+                        <textarea id="docRemarks" rows="2" placeholder="Catatan tambahan atau arahan lanjut..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="flex items-center justify-end space-x-3 border-t border-slate-100 pt-4 mt-6">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-navy-900 hover:bg-navy-950 text-white font-medium text-sm rounded-lg shadow">Simpan Rekod</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- MODAL 2: QUICK CHANGE STATUS MODAL (ADMIN ONLY) -->
+    <div id="statusModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-arrows-rotate text-sky-600"></i>
+                <span>Kemas Kini Status Dokumen</span>
+            </h3>
+            <p id="statusModalDocName" class="text-xs text-slate-600 font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                Dokumen...
+            </p>
+
+            <input type="hidden" id="statusTargetId">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Pilih Status Baharu</label>
+                <select id="quickStatusSelect" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+                    <option value="Pending">Pending (Kuning)</option>
+                    <option value="In Progress">In Progress (Biru)</option>
+                    <option value="Completed">Completed (Hijau)</option>
+                    <option value="On Hold">On Hold (Merah/Jingga)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Kemaskini Catatan Ringkas</label>
+                <input type="text" id="quickStatusRemarks" placeholder="Contoh: Dokumen diluluskan oleh Ketua Unit" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy-900 focus:outline-none">
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button onclick="closeStatusModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-medium text-slate-700">Batal</button>
+                <button onclick="saveQuickStatus()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium shadow">Simpan Kemaskini</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL 3: DELETE CONFIRMATION MODAL -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 text-center space-y-4">
+            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900">Sahkan Penghapusan Rekod</h3>
+            <p class="text-xs text-slate-500">Adakah anda pasti untuk menghapuskan rekod dokumen ini? Tindakan ini tidak boleh dibatalkan.</p>
+            <input type="hidden" id="deleteTargetId">
+            <div class="flex items-center justify-center space-x-3 pt-2">
+                <button onclick="closeDeleteModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-medium text-slate-700">Batal</button>
+                <button onclick="confirmDelete()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium shadow">Ya, Hapuskan</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- PRINT REPORT TEMPLATE (Hidden by default, shown during print) -->
+    <div id="printReportContainer" class="hidden print-only p-8">
+        <div class="text-center border-b-2 border-slate-900 pb-4 mb-6">
+            <h1 class="text-xl font-bold uppercase tracking-wider">Hospital Port Dickson</h1>
+            <h2 class="text-md font-semibold text-slate-700">Unit Perolehan, Aset dan Stor</h2>
+            <p class="text-xs text-slate-500">Laporan Rasmi Pemantauan Dokumen & Perolehan</p>
+            <p class="text-xs text-slate-400 mt-1">Tarikh Cetakan: <span id="printDate"></span></p>
+        </div>
+
+        <table class="w-full text-left text-[10px] border-collapse border border-slate-300">
+            <thead>
+                <tr class="bg-slate-100">
+                    <th class="border border-slate-300 p-1.5 text-center">No.</th>
+                    <th class="border border-slate-300 p-1.5">Tarikh</th>
+                    <th class="border border-slate-300 p-1.5">Nama / Pembekal</th>
+                    <th class="border border-slate-300 p-1.5">Dokumen</th>
+                    <th class="border border-slate-300 p-1.5">SQ</th>
+                    <th class="border border-slate-300 p-1.5">LPO</th>
+                    <th class="border border-slate-300 p-1.5">Invois</th>
+                    <th class="border border-slate-300 p-1.5 text-right">Nilai (RM)</th>
+                    <th class="border border-slate-300 p-1.5 text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody id="printTableBody">
+                <!-- Dynamically populated for printing -->
+            </tbody>
+        </table>
+
+        <div class="mt-12 flex justify-between text-xs pt-8 border-t border-slate-200">
+            <div>
+                <p>Disediakan Oleh:</p>
+                <div class="h-12"></div>
+                <p class="border-t border-slate-400 pt-1 font-semibold">Pegawai Perolehan / Aset</p>
+            </div>
+            <div>
+                <p>Disahkan Oleh:</p>
+                <div class="h-12"></div>
+                <p class="border-t border-slate-400 pt-1 font-semibold">Ketua Unit Perolehan, Aset & Stor</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- APPLICATION JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA STATE & LOCAL STORAGE INITIALIZATION ---
+        const STORAGE_KEY = 'hpd_dms_documents_v2';
+        let currentRole = 'admin'; // 'admin' or 'viewer'
+        let documents = [];
+        let statusChartInstance = null;
+        let activityChartInstance = null;
+
+        // Sample Pre-seeded Hospital Port Dickson Documents
+        const sampleDocuments = [
+            {
+                id: 'DOC-1001',
+                date: '2026-10-01',
+                name: 'MediHealth Supplies Sdn Bhd',
+                title: 'Pembekalan Sarung Tangan Pakai Buang (Nitrile Gloves) Wad 3',
+                sq: 'SQ-2026-0891',
+                rn: 'RN-2026-0412',
+                lpo: 'LPO-HPD-9921',
+                do: 'DO-88212',
+                doSystem: 'SYS-DO-1029',
+                invoice: 'INV-2026-5541',
+                value: 14250.00,
+                status: 'Completed',
+                remarks: 'Barang diterima lengkap dan semakan fizikal lulus.'
+            },
+            {
+                id: 'DOC-1002',
+                date: '2026-10-05',
+                name: 'Biomedical Tech Engineering',
+                title: 'Penyelenggaraan Serantau Mesin ECG & Monitor Pesakit Jabatan Kecemasan',
+                sq: 'SQ-2026-0902',
+                rn: 'RN-2026-0440',
+                lpo: 'LPO-HPD-9950',
+                do: 'DO-88390',
+                doSystem: 'SYS-DO-1088',
+                invoice: 'INV-2026-6102',
+                value: 38700.00,
+                status: 'In Progress',
+                remarks: 'Pemasangan alat ganti selesai, menunggu ujian komisen.'
+            },
+            {
+                id: 'DOC-1003',
+                date: '2026-10-08',
+                name: 'Perkhidmatan Linen Negeri Enterprise',
+                title: 'Pesanan Pukal Beg Dobi Infeksius & Sarung Tilam Hospital',
+                sq: 'SQ-2026-0920',
+                rn: 'RN-2026-0465',
+                lpo: 'LPO-HPD-9978',
+                do: 'DO-88450',
+                doSystem: 'SYS-DO-1110',
+                invoice: 'N/A',
+                value: 8900.50,
+                status: 'Pending',
+                remarks: 'Menunggu kelulusan LPO kewangan.'
+            },
+            {
+                id: 'DOC-1004',
+                date: '2026-10-10',
+                name: 'Perniagaan Alat Tulis Port Dickson',
+                title: 'Pembekalan Kertas A4 & Alat Tulis Pentadbiran Utama',
+                sq: 'SQ-2026-0941',
+                rn: 'RN-2026-0480',
+                lpo: 'LPO-HPD-10012',
+                do: 'DO-88510',
+                doSystem: 'SYS-DO-1145',
+                invoice: 'INV-2026-7011',
+                value: 3450.00,
+                status: 'Completed',
+                remarks: 'Stok diterima di Stor Utama.'
+            },
+            {
+                id: 'DOC-1005',
+                date: '2026-10-12',
+                name: 'PharmaCare Reagents Laboratory',
+                title: 'Reagen Ujian Darah Makmal Patologi & Tabung Uji',
+                sq: 'SQ-2026-0955',
+                rn: 'RN-2026-0501',
+                lpo: 'LPO-HPD-10045',
+                do: 'N/A',
+                doSystem: 'N/A',
+                invoice: 'N/A',
+                value: 52000.00,
+                status: 'On Hold',
+                remarks: 'Penangguhan pembekalan dari vendor atas isu stok import.'
+            }
+        ];
+
+        // --- ON INITIAL LOAD ---
+        window.onload = function() {
+            loadDocuments();
+            updateCurrentDate();
+            renderDashboard();
+            renderDocumentTable();
+            applyRolePermissions();
+        };
+
+        // Load Documents from LocalStorage or pre-seed
+        function loadDocuments() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    documents = JSON.parse(stored);
+                } catch(e) {
+                    documents = [...sampleDocuments];
+                }
+            } else {
+                documents = [...sampleDocuments];
+                saveDocumentsToStorage();
+            }
+        }
+
+        function saveDocumentsToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(documents));
+        }
+
+        function updateCurrentDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('ms-MY', options);
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString('ms-MY');
+        }
+
+        // --- ROLE SWITCHING SYSTEM ---
+        function toggleRoleDropdown() {
+            const dropdown = document.getElementById('roleDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function switchRole(role) {
+            currentRole = role;
+            document.getElementById('roleDropdown').classList.add('hidden');
+            
+            const nameEl = document.getElementById('userDisplayName');
+            const badgeEl = document.getElementById('userRoleBadge');
+
+            if (role === 'admin') {
+                nameEl.textContent = 'Pentadbir Perolehan';
+                badgeEl.innerHTML = `<i class="fa-solid fa-shield-halved text-[10px]"></i> Administrator`;
+                badgeEl.className = "text-xs text-emerald-400 font-medium flex items-center justify-end gap-1";
+            } else {
+                nameEl.textContent = 'Pegawai Semakan (Viewer)';
+                badgeEl.innerHTML = `<i class="fa-solid fa-eye text-[10px]"></i> Viewer Mode`;
+                badgeEl.className = "text-xs text-amber-300 font-medium flex items-center justify-end gap-1";
+            }
+
+            applyRolePermissions();
+            renderDocumentTable();
+        }
+
+        function applyRolePermissions() {
+            const adminElements = document.querySelectorAll('.admin-only');
+            adminElements.forEach(el => {
+                if (currentRole === 'admin') {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // Quick add button in header
+            const quickAddBtn = document.getElementById('quickAddBtn');
+            if (currentRole === 'admin') {
+                quickAddBtn.classList.remove('hidden');
+            } else {
+                quickAddBtn.classList.add('hidden');
+            }
+        }
+
+        // --- NAVIGATION SPA TAB SWITCHING ---
+        function switchTab(tabName) {
+            // Hide all views
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-register').classList.add('hidden');
+            document.getElementById('view-reports').classList.add('hidden');
+            document.getElementById('view-users').classList.add('hidden');
+
+            // Reset tab styles
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('border-navy-900', 'text-navy-900', 'font-semibold');
+                tab.classList.add('border-transparent', 'text-slate-500', 'font-medium');
+            });
+
+            // Activate chosen view & tab
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            activeTab.classList.remove('border-transparent', 'text-slate-500', 'font-medium');
+            activeTab.classList.add('border-navy-900', 'text-navy-900', 'font-semibold');
+
+            if (tabName === 'dashboard') {
+                renderDashboard();
+            } else if (tabName === 'register') {
+                renderDocumentTable();
+            }
+        }
+
+        // --- DASHBOARD CHARTS & KPIS ---
+        function renderDashboard() {
+            // Count KPIs
+            const totalDocs = documents.length;
+            const pending = documents.filter(d => d.status === 'Pending').length;
+            const inProgress = documents.filter(d => d.status === 'In Progress').length;
+            const completed = documents.filter(d => d.status === 'Completed').length;
+            const onHold = documents.filter(d => d.status === 'On Hold').length;
+            const totalValue = documents.reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0);
+
+            document.getElementById('statTotalDocs').textContent = totalDocs;
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statInProgress').textContent = inProgress;
+            document.getElementById('statCompleted').textContent = completed;
+            document.getElementById('statOnHold').textContent = onHold;
+            document.getElementById('statTotalValue').textContent = `RM ${totalValue.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Render Charts
+            renderStatusChart(pending, inProgress, completed, onHold);
+            renderActivityChart();
+            renderRecentActivity();
+        }
+
+        function renderStatusChart(pending, inProgress, completed, onHold) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            if (statusChartInstance) statusChartInstance.destroy();
+
+            statusChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Dalam Proses', 'Selesai', 'On Hold'],
+                    datasets: [{
+                        data: [pending, inProgress, completed, onHold],
+                        backgroundColor: ['#D97706', '#0284C7', '#059669', '#E11D48'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function renderActivityChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            if (activityChartInstance) activityChartInstance.destroy();
+
+            // Group document counts by month
+            const months = ['Jul 2026', 'Ogos 2026', 'Sep 2026', 'Okt 2026'];
+            const counts = [2, 4, 3, documents.length];
+
+            activityChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Bilangan Dokumen Didaftarkan',
+                        data: counts,
+                        backgroundColor: '#1B3C73',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function renderRecentActivity() {
+            const listEl = document.getElementById('recentActivityList');
+            const recentDocs = [...documents].reverse().slice(0, 4);
+
+            if (recentDocs.length === 0) {
+                listEl.innerHTML = `<p class="py-4 text-center text-slate-400">Tiada aktiviti terkini.</p>`;
+                return;
+            }
+
+            listEl.innerHTML = recentDocs.map(doc => `
+                <div class="py-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-slate-100 rounded-lg text-navy-800">
+                            <i class="fa-solid fa-file-contract"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-slate-800">${escapeHtml(doc.title)}</p>
+                            <p class="text-[11px] text-slate-400">${escapeHtml(doc.name)} &bull; ${doc.date}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        ${getStatusBadge(doc.status)}
+                        <p class="text-[11px] font-mono text-slate-500 mt-1">RM ${(parseFloat(doc.value)||0).toFixed(2)}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- DOCUMENT REGISTER TABLE RENDERING ---
+        function renderDocumentTable() {
+            const tbody = document.getElementById('documentTableBody');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const statusVal = document.getElementById('statusFilter').value;
+            const noData = document.getElementById('noDataMessage');
+
+            // Filter logic
+            const filtered = documents.filter(doc => {
+                const matchesSearch = 
+                    (doc.name || '').toLowerCase().includes(searchVal) ||
+                    (doc.title || '').toLowerCase().includes(searchVal) ||
+                    (doc.sq || '').toLowerCase().includes(searchVal) ||
+                    (doc.rn || '').toLowerCase().includes(searchVal) ||
+                    (doc.lpo || '').toLowerCase().includes(searchVal) ||
+                    (doc.do || '').toLowerCase().includes(searchVal) ||
+                    (doc.invoice || '').toLowerCase().includes(searchVal);
+
+                const matchesStatus = (statusVal === 'ALL') || (doc.status === statusVal);
+
+                return matchesSearch && matchesStatus;
+            });
+
+            document.getElementById('recordCountInfo').textContent = `Menunjukkan ${filtered.length} daripada ${documents.length} rekod`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                noData.classList.remove('hidden');
+                return;
+            } else {
+                noData.classList.add('hidden');
+            }
+
+            // Render exact 14 columns
+            tbody.innerHTML = filtered.map((doc, index) => `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                    <!-- 1. No. -->
+                    <td class="py-3 px-3 text-center font-mono font-medium text-slate-500">${index + 1}</td>
+                    <!-- 2. Date -->
+                    <td class="py-3 px-3 font-mono whitespace-nowrap">${doc.date || '-'}</td>
+                    <!-- 3. Name -->
+                    <td class="py-3 px-3 font-semibold text-slate-800">${escapeHtml(doc.name || '-')}</td>
+                    <!-- 4. Name of Document -->
+                    <td class="py-3 px-3 max-w-xs font-medium text-slate-700">${escapeHtml(doc.title || '-')}</td>
+                    <!-- 5. SQ Number -->
+                    <td class="py-3 px-3 font-mono text-slate-600">${escapeHtml(doc.sq || '-')}</td>
+                    <!-- 6. RN Number -->
+                    <td class="py-3 px-3 font-mono text-slate-600">${escapeHtml(doc.rn || '-')}</td>
+                    <!-- 7. LPO Number -->
+                    <td class="py-3 px-3 font-mono text-slate-600 font-medium">${escapeHtml(doc.lpo || '-')}</td>
+                    <!-- 8. DO Number -->
+                    <td class="py-3 px-3 font-mono text-slate-600">${escapeHtml(doc.do || '-')}</td>
+                    <!-- 9. DO System Number -->
+                    <td class="py-3 px-3 font-mono text-slate-600">${escapeHtml(doc.doSystem || '-')}</td>
+                    <!-- 10. Invoice Number -->
+                    <td class="py-3 px-3 font-mono text-slate-600">${escapeHtml(doc.invoice || '-')}</td>
+                    <!-- 11. Value (RM) -->
+                    <td class="py-3 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                        RM ${(parseFloat(doc.value) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <!-- 12. Status -->
+                    <td class="py-3 px-3 text-center whitespace-nowrap">${getStatusBadge(doc.status)}</td>
+                    <!-- 13. Remarks -->
+                    <td class="py-3 px-3 text-slate-500 text-[11px] max-w-xs">${escapeHtml(doc.remarks || '-')}</td>
+                    <!-- 14. Actions -->
+                    <td class="py-3 px-3 text-center whitespace-nowrap">
+                        <div class="flex items-center justify-center space-x-1">
+                            ${currentRole === 'admin' ? `
+                                <button onclick="openEditModal('${doc.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit Dokumen">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="openQuickStatusModal('${doc.id}')" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded" title="Tukar Status">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                </button>
+                                <button onclick="openDeleteModal('${doc.id}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded" title="Hapuskan Rekod">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            ` : `
+                                <button onclick="viewDocDetails('${doc.id}')" class="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Lihat Perincian">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterDocuments() {
+            renderDocumentTable();
+        }
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'Completed':
+                    return `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold text-[10px] px-2.5 py-0.5 rounded-full inline-block">Completed</span>`;
+                case 'In Progress':
+                    return `<span class="bg-sky-100 text-sky-800 border border-sky-300 font-semibold text-[10px] px-2.5 py-0.5 rounded-full inline-block">In Progress</span>`;
+                case 'Pending':
+                    return `<span class="bg-amber-100 text-amber-800 border border-amber-300 font-semibold text-[10px] px-2.5 py-0.5 rounded-full inline-block">Pending</span>`;
+                case 'On Hold':
+                    return `<span class="bg-rose-100 text-rose-800 border border-rose-300 font-semibold text-[10px] px-2.5 py-0.5 rounded-full inline-block">On Hold</span>`;
+                default:
+                    return `<span class="bg-slate-100 text-slate-800 border border-slate-300 font-semibold text-[10px] px-2.5 py-0.5 rounded-full inline-block">${status}</span>`;
+            }
+        }
+
+        // --- ADD / EDIT DOCUMENT MODAL ---
+        function openAddModal() {
+            if (currentRole !== 'admin') {
+                alert('Akses Terhad: Hanya Pentadbir dibenarkan mendaftar dokumen.');
+                return;
+            }
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-file-circle-plus text-amber-400"></i><span>Daftar Dokumen Baharu</span>`;
+            document.getElementById('docForm').reset();
+            document.getElementById('editDocId').value = '';
+            document.getElementById('docDate').valueAsDate = new Date();
+            document.getElementById('docModal').classList.remove('hidden');
+        }
+
+        function openEditModal(docId) {
+            const doc = documents.find(d => d.id === docId);
+            if (!doc) return;
+
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-400"></i><span>Kemaskini Dokumen (${doc.id})</span>`;
+            document.getElementById('editDocId').value = doc.id;
+            document.getElementById('docDate').value = doc.date;
+            document.getElementById('docStatus').value = doc.status;
+            document.getElementById('docName').value = doc.name;
+            document.getElementById('docTitle').value = doc.title;
+            document.getElementById('docSQ').value = doc.sq || '';
+            document.getElementById('docRN').value = doc.rn || '';
+            document.getElementById('docLPO').value = doc.lpo || '';
+            document.getElementById('docDO').value = doc.do || '';
+            document.getElementById('docDOSystem').value = doc.doSystem || '';
+            document.getElementById('docInvoice').value = doc.invoice || '';
+            document.getElementById('docValue').value = doc.value;
+            document.getElementById('docRemarks').value = doc.remarks || '';
+
+            document.getElementById('docModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('docModal').classList.add('hidden');
+        }
+
+        function saveDocument(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editDocId').value;
+
+            const newDoc = {
+                id: editId ? editId : 'DOC-' + Math.floor(1000 + Math.random() * 9000),
+                date: document.getElementById('docDate').value,
+                status: document.getElementById('docStatus').value,
+                name: document.getElementById('docName').value,
+                title: document.getElementById('docTitle').value,
+                sq: document.getElementById('docSQ').value || 'N/A',
+                rn: document.getElementById('docRN').value || 'N/A',
+                lpo: document.getElementById('docLPO').value || 'N/A',
+                do: document.getElementById('docDO').value || 'N/A',
+                doSystem: document.getElementById('docDOSystem').value || 'N/A',
+                invoice: document.getElementById('docInvoice').value || 'N/A',
+                value: parseFloat(document.getElementById('docValue').value) || 0,
+                remarks: document.getElementById('docRemarks').value || '-'
+            };
+
+            if (editId) {
+                // Update existing
+                const index = documents.findIndex(d => d.id === editId);
+                if (index !== -1) documents[index] = newDoc;
+            } else {
+                // Add new
+                documents.push(newDoc);
+            }
+
+            saveDocumentsToStorage();
+            closeModal();
+            renderDocumentTable();
+            renderDashboard();
+        }
+
+        // --- QUICK STATUS MODAL ---
+        function openQuickStatusModal(docId) {
+            const doc = documents.find(d => d.id === docId);
+            if (!doc) return;
+
+            document.getElementById('statusTargetId').value = doc.id;
+            document.getElementById('statusModalDocName').textContent = `${doc.title} (${doc.name})`;
+            document.getElementById('quickStatusSelect').value = doc.status;
+            document.getElementById('quickStatusRemarks').value = doc.remarks || '';
+            document.getElementById('statusModal').classList.remove('hidden');
+        }
+
+        function closeStatusModal() {
+            document.getElementById('statusModal').classList.add('hidden');
+        }
+
+        function saveQuickStatus() {
+            const id = document.getElementById('statusTargetId').value;
+            const doc = documents.find(d => d.id === id);
+            if (doc) {
+                doc.status = document.getElementById('quickStatusSelect').value;
+                doc.remarks = document.getElementById('quickStatusRemarks').value;
+                saveDocumentsToStorage();
+                renderDocumentTable();
+                renderDashboard();
+            }
+            closeStatusModal();
+        }
+
+        // --- DELETE MODAL ---
+        function openDeleteModal(docId) {
+            document.getElementById('deleteTargetId').value = docId;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function confirmDelete() {
+            const id = document.getElementById('deleteTargetId').value;
+            documents = documents.filter(d => d.id !== id);
+            saveDocumentsToStorage();
+            closeDeleteModal();
+            renderDocumentTable();
+            renderDashboard();
+        }
+
+        function viewDocDetails(docId) {
+            const doc = documents.find(d => d.id === docId);
+            if (doc) {
+                alert(`MAKLUMAT DOKUMEN (${doc.id}):\n\nTajuk: ${doc.title}\nPemohon/Pembekal: ${doc.name}\nTarikh: ${doc.date}\nLPO: ${doc.lpo}\nInvois: ${doc.invoice}\nNilai: RM ${doc.value.toFixed(2)}\nStatus: ${doc.status}\nCatatan: ${doc.remarks}`);
+            }
+        }
+
+        // --- EXPORT & PRINT FUNCTIONS ---
+        function exportCSV() {
+            if (documents.length === 0) {
+                alert('Tiada data untuk dieksport.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,Tarikh,Nama/Pembekal,Nama Dokumen,No SQ,No RN,No LPO,No DO,No DO Sistem,No Invois,Nilai (RM),Status,Catatan\n";
+
+            documents.forEach((doc, idx) => {
+                const row = [
+                    idx + 1,
+                    `"${doc.date}"`,
+                    `"${doc.name.replace(/"/g, '""')}"`,
+                    `"${doc.title.replace(/"/g, '""')}"`,
+                    `"${doc.sq}"`,
+                    `"${doc.rn}"`,
+                    `"${doc.lpo}"`,
+                    `"${doc.do}"`,
+                    `"${doc.doSystem}"`,
+                    `"${doc.invoice}"`,
+                    doc.value.toFixed(2),
+                    `"${doc.status}"`,
+                    `"${(doc.remarks || '').replace(/"/g, '""')}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Laporan_Dokumen_HPD_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function printOfficialReport() {
+            const printTable = document.getElementById('printTableBody');
+            printTable.innerHTML = documents.map((doc, i) => `
+                <tr>
+                    <td class="border border-slate-300 p-1.5 text-center">${i + 1}</td>
+                    <td class="border border-slate-300 p-1.5">${doc.date}</td>
+                    <td class="border border-slate-300 p-1.5 font-semibold">${escapeHtml(doc.name)}</td>
+                    <td class="border border-slate-300 p-1.5">${escapeHtml(doc.title)}</td>
+                    <td class="border border-slate-300 p-1.5">${doc.sq}</td>
+                    <td class="border border-slate-300 p-1.5">${doc.lpo}</td>
+                    <td class="border border-slate-300 p-1.5">${doc.invoice}</td>
+                    <td class="border border-slate-300 p-1.5 text-right font-mono">RM ${doc.value.toFixed(2)}</td>
+                    <td class="border border-slate-300 p-1.5 text-center font-semibold">${doc.status}</td>
+                </tr>
+            `).join('');
+
+            window.print();
+        }
+
+        // Helper Utility to prevent XSS in table render
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
